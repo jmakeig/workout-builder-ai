@@ -34,4 +34,7 @@
 	{/if}
 </dl>
 
-<p><a href="/exercises">Back to exercises</a></p>
+<p>
+	<a href="/exercises/{data.exercise.label}/edit">Edit</a> |
+	<a href="/exercises">Back to exercises</a>
+</p>
