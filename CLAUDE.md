@@ -63,6 +63,10 @@ Use runes for reactivity:
 
 Use the `Validation` class from `$lib/validation` for form validation. It collects issues with optional paths to identify which field has the error.
 
+- Always use `novalidate` on forms to disable browser validation
+- Use `Control` component from `$lib/components/Control.svelte` to display inline validation errors
+- Server actions return `validation` directly; hooks.js handles serialization
+
 ## Conventions
 
 - Use snake_case for function and variable names (except standard JS interfaces like `toJSON`, `toString`, `fromJSON`)
