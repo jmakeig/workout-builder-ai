@@ -1,135 +1,171 @@
-export class Activity {
+/**
+ * Base class for all entities with common properties.
+ */
+export abstract class Entity {
+	readonly id: string = crypto.randomUUID();
+	label = $state<string>('');
+	name = $state<string>('');
+	description = $state<string | null>(null);
+
+	constructor(name: string, label?: string) {
+		this.name = name;
+		this.label = label ?? this.id;
+	}
+
+	abstract toJSON(): object;
+}
+
+/**
+ * Helper interface for ordered collection management.
+ */
+export interface OrderedCollection<T> {
+	[Symbol.iterator](): Iterator<T>;
+	readonly length: number;
+	at(index: number): T | undefined;
+	add(item: T, to?: number): this;
+	remove(from: number, count?: number): this;
+	move(from: number, to: number, count?: number): this;
+}
+
+function create_ordered_collection<T>(items: T[]): OrderedCollection<T> {
+	return {
+		[Symbol.iterator]() {
+			return items[Symbol.iterator]();
+		},
+		get length() {
+			return items.length;
+		},
+		at(index: number) {
+			return items.at(index);
+		},
+		add(item: T, to: number = items.length) {
+			items.splice(to, 0, item);
+			return this;
+		},
+		remove(from: number, count: number = 1) {
+			items.splice(from, count);
+			return this;
+		},
+		move(from: number, to: number, count: number = 1) {
+			const moved = items.splice(from, count);
+			items.splice(to, 0, ...moved);
+			return this;
+		}
+	};
+}
+
+/**
+ * Base class for activities (Exercise or Rest) with a duration.
+ */
+export abstract class Activity extends Entity {
 	#duration = $state(0);
-	instructions = $state(null);
-	constructor() {}
-	get duration() {
+	instructions = $state<string | null>(null);
+
+	get duration(): number {
 		return this.#duration;
 	}
-	set duration(seconds) {
-		if ('number' === typeof seconds) this.#duration = seconds;
-		else if ('string' === typeof seconds) {
+
+	set duration(seconds: number | string) {
+		if ('number' === typeof seconds) {
+			this.#duration = seconds;
+		} else if ('string' === typeof seconds) {
 			const int = parseInt(seconds, 10);
-			if (Number.isNaN(int)) this.#duration = 0;
-			else this.#duration = int;
-		} else throw new TypeError(typeof seconds);
+			this.#duration = Number.isNaN(int) ? 0 : int;
+		} else {
+			throw new TypeError(typeof seconds);
+		}
 	}
+
 	toJSON() {
 		return {
+			id: this.id,
+			label: this.label,
+			name: this.name,
+			description: this.description,
 			duration: this.duration,
 			instructions: this.instructions
 		};
 	}
 }
 
+/**
+ * An exercise activity with a name and description.
+ */
 export class Exercise extends Activity {
-	name = $state(null);
-	description = $state(null);
-	constructor(name) {
-		super();
-		if ('string' !== typeof name) throw new TypeError();
-		this.name = name;
+	constructor(name: string, label?: string) {
+		super(name, label);
 	}
+
 	toJSON() {
 		return {
 			...super.toJSON(),
-			name: this.name,
-			description: this.description
+			type: 'exercise' as const
 		};
 	}
 }
 
+/**
+ * A rest period between exercises.
+ */
 export class Rest extends Activity {
-	get name() {
-		return 'Rest';
+	override readonly name = 'Rest';
+	override readonly description = 'Chill, brah!';
+
+	constructor() {
+		super('Rest');
 	}
-	get description() {
-		return 'Chill, brah!';
-	}
+
 	toJSON() {
 		return {
 			...super.toJSON(),
-			name: this.name,
-			description: this.description
+			type: 'rest' as const
 		};
 	}
 }
 
-export class Set {
-	name = $state(null);
-	#activities = $state([]);
-	constructor(name) {
-		if ('string' !== typeof name) throw new TypeError();
-		this.name = name;
+/**
+ * A set contains one or more ordered activities.
+ */
+export class Set extends Entity {
+	#activities = $state<Activity[]>([]);
+
+	constructor(name: string, label?: string) {
+		super(name, label);
 	}
-	get activities() {
-		const that = this;
-		return {
-			[Symbol.iterator]() {
-				return that.#activities[Symbol.iterator]();
-			},
-			get length() {
-				return that.#activities.length;
-			},
-			add(activity, to = that.#activities.length) {
-				that.#activities.splice(to, 0, activity);
-				return this;
-			},
-			remove(from, count = 1) {
-				that.#activities.splice(from, count);
-				return this;
-			},
-			move(from, to, count = 1) {
-				const items = that.#activities.splice(from, count);
-				that.#activities.splice(to, 0, ...items);
-				return this;
-			}
-		};
+
+	get activities(): OrderedCollection<Activity> {
+		return create_ordered_collection(this.#activities);
 	}
+
 	toJSON() {
 		return {
+			id: this.id,
+			label: this.label,
 			name: this.name,
+			description: this.description,
 			activities: this.#activities.map((activity) => activity.toJSON())
 		};
 	}
 }
 
-export class Workout {
-	name = $state(null);
-	description = $state(null);
-	#sets = $state([]);
-	constructor(name, description = null) {
-		if ('string' !== typeof name) throw new TypeError();
-		this.name = name;
-		this.description = description;
+/**
+ * A workout contains one or more ordered sets.
+ */
+export class Workout extends Entity {
+	#sets = $state<Set[]>([]);
+
+	constructor(name: string, label?: string) {
+		super(name, label);
 	}
-	get sets() {
-		const that = this;
-		return {
-			[Symbol.iterator]() {
-				return that.#sets[Symbol.iterator]();
-			},
-			get length() {
-				return that.#sets.length;
-			},
-			// TODO: Extract this out
-			add(set, to = that.#sets.length) {
-				if ('string' === typeof set) set = new Set(set);
-				that.#sets.splice(to, 0, set);
-				return this;
-			},
-			remove(from, count = 1) {
-				that.#sets.splice(from, count);
-				return this;
-			},
-			move(from, to, count = 1) {
-				const items = that.#sets.splice(from, count);
-				that.#sets.splice(to, 0, ...items);
-				return this;
-			}
-		};
+
+	get sets(): OrderedCollection<Set> {
+		return create_ordered_collection(this.#sets);
 	}
+
 	toJSON() {
 		return {
+			id: this.id,
+			label: this.label,
 			name: this.name,
 			description: this.description,
 			sets: this.#sets.map((set) => set.toJSON())

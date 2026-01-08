@@ -59,9 +59,14 @@ Use runes for reactivity:
 </script>
 ```
 
+## Form Validation
+
+Use the `Validation` class from `$lib/validation` for form validation. It collects issues with optional paths to identify which field has the error.
+
 ## Conventions
 
-- Use tabs not spaces for indenting
+- Use snake_case for function and variable names (except standard JS interfaces like `toJSON`, `toString`, `fromJSON`)
+- Use tabs, not spaces for indenting
 - Use TypeScript for all `.ts`, `.svelte`, and `.svelte.ts` files
 - Place reusable components in `src/lib/components/`
 - Place utility functions in `src/lib/utils/`
