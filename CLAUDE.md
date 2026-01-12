@@ -18,25 +18,11 @@ Workout Builder AI - A SvelteKit application built with Svelte 5 and TypeScript.
 
 ## Project Structure
 
-```
-src/
-├── lib/           # Shared components, utilities, stores ($lib alias)
-│   ├── assets/    # Static assets imported in code
-│   └── index.ts   # Public exports from $lib
-├── routes/        # File-based routing
-│   ├── +page.svelte      # Page components
-│   ├── +layout.svelte    # Layout components
-│   ├── +page.server.ts   # Server-side load functions
-│   └── +server.ts        # API endpoints
-└── app.html       # HTML template
-static/            # Static files served at root
-```
-
 ## Tech Stack
 
 - **Framework**: SvelteKit 2
 - **UI**: Svelte 5 (uses runes: `$state`, `$derived`, `$effect`, `$props`)
-- **Language**: TypeScript
+- **Language**: JavaScript with strong TypeScript types annotated in JSDoc commments
 - **Build**: Vite 7
 - **Adapter**: adapter-auto (auto-detects deployment platform)
 
@@ -59,20 +45,12 @@ Use runes for reactivity:
 </script>
 ```
 
-## Form Validation
-
-Use the `Validation` class from `$lib/validation` for form validation. It collects issues with optional paths to identify which field has the error.
-
-- Always use `novalidate` on forms to disable browser validation
-- Use `Control` component from `$lib/components/Control.svelte` to display inline validation errors
-- Server actions return `validation` directly; hooks.js handles serialization
-
 ## Conventions
 
-- Use snake_case for function and variable names (except standard JS interfaces like `toJSON`, `toString`, `fromJSON`)
-- Use tabs, not spaces for indenting
-- Use TypeScript for all `.ts`, `.svelte`, and `.svelte.ts` files
+- Use `snake_case` for function and variable names, except standard JS interfaces like `toJSON`, `toString`, `fromJSON`
+- Use tabs, not spaces for indenting, as captured in `.prettierrc`
 - Place reusable components in `src/lib/components/`
 - Place utility functions in `src/lib/utils/`
 - Use `$lib` alias for imports from `src/lib/`
 - Server-only code goes in `+page.server.ts` or `+server.ts` files
+- Use `$lib/server.api.js` to export server-side

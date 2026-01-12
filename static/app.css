@@ -1,0 +1,71 @@
+:root {
+	--color-primary: #3b82f6;
+	--color-secondary: #64748b;
+	--color-error: #dc2626;
+	--color-success: #16a34a;
+	--color-background: #f8fafc;
+	--color-surface: #ffffff;
+	--color-text: #1e293b;
+	--color-border: #e2e8f0;
+}
+
+body {
+	font-family:
+		system-ui,
+		-apple-system,
+		BlinkMacSystemFont,
+		'Segoe UI',
+		Roboto,
+		sans-serif;
+	margin: 0;
+	padding: 0;
+	background: var(--color-background);
+	color: var(--color-text);
+	line-height: 1.5;
+}
+
+a {
+	color: var(--color-primary);
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+input,
+select,
+textarea {
+	font: inherit;
+	padding: 0.5em 0.75em;
+	border: 1px solid var(--color-border);
+	border-radius: 4px;
+	background: var(--color-surface);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 2px solid var(--color-primary);
+	outline-offset: -1px;
+	border-color: var(--color-primary);
+}
+
+button {
+	font: inherit;
+	padding: 0.5em 1em;
+	border: none;
+	border-radius: 4px;
+	background: var(--color-primary);
+	color: white;
+	cursor: pointer;
+}
+
+button:hover {
+	opacity: 0.9;
+}
+
+button[type='reset'],
+button.secondary {
+	background: var(--color-secondary);
+}
