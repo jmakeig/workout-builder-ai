@@ -32,17 +32,17 @@
 	}}
 >
 	<Control
-		name="label"
-		value={exercise.label}
-		validation={form?.validation}
-		help="URL-friendly identifier (lowercase letters, numbers, hyphens)"
-	/>
-
-	<Control
 		name="name"
 		value={exercise.name}
 		validation={form?.validation}
 		help="The name of the exercise"
+	/>
+
+	<Control
+		name="label"
+		value={exercise.label}
+		validation={form?.validation}
+		help="URL-friendly identifier; defaults to a slug of the name"
 	/>
 
 	<Control
