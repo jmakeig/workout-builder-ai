@@ -56,16 +56,16 @@
 		{/snippet}
 	</Control>
 
-	<p>
-		<button type="submit">Save</button>
+	<div class="control actions">
+		<button class="default" type="submit">Save</button>
 		<a href="/exercises/{data.exercise.label}">Cancel</a>
-	</p>
+	</div>
 </form>
 
 <hr />
 
 <form method="post" action="?/delete" use:enhance>
-	<p>
+	<div class="control actions">
 		<button type="submit">Delete</button>
-	</p>
+	</div>
 </form>

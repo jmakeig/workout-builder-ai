@@ -53,8 +53,8 @@
 		{/snippet}
 	</Control>
 
-	<p>
-		<button type="submit">Create</button>
+	<div class="control actions">
+		<button class="default" type="submit">Create</button>
 		<a href="/exercises">Cancel</a>
-	</p>
+	</div>
 </form>
