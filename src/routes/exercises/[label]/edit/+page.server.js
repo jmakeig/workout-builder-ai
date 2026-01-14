@@ -3,8 +3,8 @@ import { get_exercise, update_exercise, delete_exercise } from '$lib/server/api.
 import { is_invalid } from '$lib/entities.js';
 
 /** @type {import('./$types').PageServerLoad} */
-export function load({ params }) {
-	const exercise = get_exercise(params.label);
+export async function load({ params }) {
+	const exercise = await get_exercise(params.label);
 
 	if (!exercise) {
 		error(404, 'Exercise not found');
@@ -16,7 +16,7 @@ export function load({ params }) {
 /** @type {import('./$types').Actions} */
 export const actions = {
 	update: async ({ request, params }) => {
-		const existing = get_exercise(params.label);
+		const existing = await get_exercise(params.label);
 		if (!existing) {
 			error(404, 'Exercise not found');
 		}
@@ -30,7 +30,7 @@ export const actions = {
 			description: form_data.get('description')?.toString() ?? null
 		};
 
-		const result = update_exercise(pending);
+		const result = await update_exercise(pending);
 
 		if (is_invalid(result)) {
 			return fail(422, {
@@ -43,7 +43,7 @@ export const actions = {
 	},
 
 	delete: async ({ params }) => {
-		delete_exercise(params.label);
+		await delete_exercise(params.label);
 		redirect(303, '/exercises');
 	}
 };

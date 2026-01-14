@@ -13,7 +13,7 @@ export const actions = {
 			description: form_data.get('description')?.toString() ?? null
 		};
 
-		const result = create_exercise(pending);
+		const result = await create_exercise(pending);
 
 		if (is_invalid(result)) {
 			return fail(422, {
