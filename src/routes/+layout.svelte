@@ -10,6 +10,7 @@
 <header>
 	<nav>
 		<a href="/">Home</a>
+		<a href="/exercises">Exercises</a>
 	</nav>
 </header>
 
@@ -19,19 +20,13 @@
 
 <style>
 	header {
-		background: var(--color-surface);
 		border-bottom: 1px solid var(--color-border);
-		padding: 1rem 2rem;
+		padding: 1rem 0;
+		margin-bottom: 1rem;
 	}
 
 	nav {
 		display: flex;
 		gap: 1.5rem;
-	}
-
-	main {
-		max-width: 800px;
-		margin: 0 auto;
-		padding: 2rem;
 	}
 </style>

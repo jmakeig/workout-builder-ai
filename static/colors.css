@@ -1,0 +1,19 @@
+:root {
+	--color: #111827;
+	--color-secondary: #6b7280;
+	--color-link: #1d4ed8;
+	--color-link-visited: #5b21b6;
+	--color-error: #ef4444;
+	--color-success: #16a34a;
+	--color-error-secondary: #fecaca;
+	--color-background: #f9fafb;
+	--color-border: #d1d5db;
+	--color-border-highlight: #6b7280;
+	--color-action: none;
+	--color-action-highlight: #f3f4f6;
+	--color-action-active: #d1d5db;
+	--color-action-default: #2563eb;
+	--color-action-default-highlight: #1d4ed8;
+	--color-action-defualt-active: #1e40af;
+	--color-input-disabled: #f3f4f6;
+}
