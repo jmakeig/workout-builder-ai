@@ -1,10 +1,20 @@
 <script>
 	import { enhance, applyAction } from '$app/forms';
 	import { Control } from '$lib/index.js';
-	import { validate_pending_exercise, is_invalid } from '$lib/entities.js';
+	import { validate_pending_exercise, is_invalid, slug } from '$lib/entities.js';
 
 	/** @type {{ form: import('./$types').ActionData }} */
 	let { form } = $props();
+
+	// svelte-ignore state_referenced_locally
+	let label = $state(form?.exercise?.label ?? '');
+
+	/** @param {FocusEvent & { currentTarget: HTMLInputElement }} e */
+	function populate_label(e) {
+		if (!label) {
+			label = slug(e.currentTarget.value);
+		}
+	}
 </script>
 
 <h1>New Exercise</h1>
@@ -33,11 +43,12 @@
 		value={form?.exercise?.name}
 		validation={form?.validation}
 		help="The name of the exercise"
+		onblur={populate_label}
 	/>
 
 	<Control
 		name="label"
-		value={form?.exercise?.label}
+		bind:value={label}
 		validation={form?.validation}
 		help="URL-friendly identifier; defaults to a slug of the name"
 	/>

@@ -18,7 +18,7 @@
 		throw new TypeError(typeof str);
 	}
 
-	/** @type {{name: string, id?: string, label?: string, validation?: Validation<unknown>; value?: unknown, help?: string; input?: import('svelte').Snippet<[Record<string, any>]>}} */
+	/** @type {{name: string, id?: string, label?: string, validation?: Validation<unknown>; value?: unknown, help?: string; input?: import('svelte').Snippet<[Record<string, any>]>} & Record<string, any>} */
 	let {
 		name,
 		// svelte-ignore state_referenced_locally
@@ -26,7 +26,7 @@
 		// svelte-ignore state_referenced_locally
 		label = title_case(name),
 		validation = new Validation(),
-		value,
+		value = $bindable(),
 		help,
 		input,
 		...other
@@ -76,7 +76,7 @@
 				type="text"
 				{id}
 				{name}
-				{value}
+				bind:value
 				{@attach validate(validation)}
 				aria-invalid={validation?.has(name)}
 				aria-errormessage={validation?.has(name) ? `${name}-error` : undefined}
