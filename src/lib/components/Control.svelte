@@ -69,6 +69,9 @@
 				value,
 				[createAttachmentKey()]: validate(validation),
 				placeholder: attrs.placeholder,
+				'aria-invalid': validation?.has(name),
+				'aria-errormessage': validation?.has(name) ? `${name}-error` : undefined,
+				'aria-describedby': `${name}-help`,
 				...other
 			})}
 		{:else}
