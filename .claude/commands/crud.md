@@ -283,7 +283,7 @@ Callers should import `import * as api from '$lib/server/api.js'` and call funct
 
 ## Types
 
-Concrete entities will always have a readonly unique identifier using the branded `ID` type (see definition below). Identifiers should use the singular name of the entity as its property name (e.g. `customer`) and default to UUID v4, generated in the database. 
+Concrete entities will always have a readonly unique identifier using the branded `ID` type (see definition below). Identifiers should use the singular name of the entity as its property name (e.g. `customer`) and default to UUID v4, generated in the database.
 
 ```typescript
 /*** Utilities ***/
@@ -459,7 +459,7 @@ A form can provide its own custom input control by passing in a Svelte `snippet`
 
 ### Client-side validation
 
-In addtion to server-side validation, forms should validate entities before submitting changes. Client and server should use the _exact_ same validation code and the `Validation` helper class to implement validation. Server-side validation may also include additional checks, such as the uniqueness of a `label` property. 
+In addtion to server-side validation, forms should validate entities before submitting changes. Client and server should use the _exact_ same validation code and the `Validation` helper class to implement validation. Server-side validation may also include additional checks, such as the uniqueness of a `label` property.
 
 Here‘s an example of a `form` declaration that implements a custom `use:enhance` to provide client-side validation:
 

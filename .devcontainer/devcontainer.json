@@ -15,7 +15,9 @@
 				"editor.defaultFormatter": "esbenp.prettier-vscode",
 				"[svelte]": {
 					"editor.defaultFormatter": "svelte.svelte-vscode"
-				}
+				},
+				"editor.minimap.enabled": false,
+				"scm.diffDecorations": "gutter"
 			}
 		}
 	},

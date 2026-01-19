@@ -59,7 +59,7 @@ Use runes for reactivity:
 - Prefer global styles imported in to `app.html` over componenent styles
 - Component styles are good for specific layouts, but fonts and colors should generally be inherited or reference via variables
 
-Basic global reset: 
+Basic global reset:
 
 ```css
 *,
@@ -124,7 +124,7 @@ thead tr:last-child th {
 }
 ```
 
-And base form styling: 
+And base form styling:
 
 ```css
 @import url('./colors.css');
@@ -199,7 +199,7 @@ form .control .helper {
 	font-size: 0.9em;
 	color: var(--color-secondary);
 }
-.validation, 
+.validation,
 form .control .validation {
 	color: var(--color-error);
 	font-weight: bolder;
