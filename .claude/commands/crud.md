@@ -2,7 +2,7 @@
 
 _The following assumes the latest version of SvelteKit with a Node.js backend and Svelte 5, using runes in the browser._
 
-<dfn><abbr>CRUD</abbr></dfn> stands for create, read, update, and delete of an <dfn>entity</dfn>. If and entity is a noun, CRUD are the basic verbs that can be executed by a user. An example of an entity is a Customer or an Sales Order.
+<dfn><abbr>CRUD</abbr></dfn> stands for create, read, update, and delete of an <dfn>entity</dfn>. If an entity is a noun, CRUD are the basic verbs that can be executed by a user. An example of an entity is a Customer or an Sales Order.
 
 These examples will use the general term `entity`. However, when building out routes or APIs you’d use the actual entity’s name. For example, the `validate_pending_entity()` function would be named `validate_pending_user()` for a User entity.
 
@@ -10,14 +10,16 @@ These examples will use the general term `entity`. However, when building out ro
 
 Routes describe the URL structure to access entities. In general, entity CRUD should use HTML forms to `POST` data, extended with SvelteKit’s [`use:enhance`](https://svelte.dev/docs/kit/form-actions#Progressive-enhancement-use:enhance) to avoid a full page reload.
 
-- `/entities`: Lists all of the entities. Uses the English plural name of the entity.
-- `/entities/new`: A `GET` request generates an empty form that allows a user to fill in the properties of the entity. The form submits a `POST` request to a `?/create` [form action](https://svelte.dev/docs/kit/form-actions). A successful submission redirects to `/entities/[label]`, making a new request to display the entity. An unscuessful `POST` returns an <dfn>`Invalid&lt;Entity>`</dfn> that provides the pending entity that was submitted along with a collection of validation errors. (See Validation below)
-- `/entities/[label]`: A read-only view of the entity instance’s properties. `[label]` is a parameter that maps to an entity’s URL-friendly, unique `label` property.
-- `/entities/[label]/edit`: Presents a form view of an entity instance. A `POST` back to this URL with a `?/update` form action. This reuses the validation from `/entities/new?/create`. However, an updated instance will have an <dfn>identifier</dfn>, while a new one won’t. (See Types below.). Finally, you can `POST` to `/entities/[label]?/delete` deletes the entity instance.
+- `/entities`: Lists all of the entities. Uses the English plural name of the entity name.
+- `/entities/new`: A `GET` request generates an empty form that allows a user to fill in the properties of the entity. The form submits a `POST` request to a `?/create` [form action](https://svelte.dev/docs/kit/form-actions). A successful submission redirects to `/entities/[label]`, making a new request to display the entity. An unscuessful `POST` returns an <dfn>`Invalid<Entity>`</dfn> that provides the pending entity that was submitted along with a collection of validation errors. (See Validation below)
+- `/entities/[label]`: A read-only view of the entity instance’s properties. `[label]` is a parameter that maps to an entity’s URL-friendly, unique `label` property. If there is no entity with that `label`, return a `404` error.
+- `/entities/[label]/edit`: Presents a form view of an entity instance. The form sends a `POST` request back to this URL with a `?/update` form action. This reuses the validation from `/entities/new?/create`. However, an updated instance will have an <dfn>identifier</dfn>, while a new one won’t. (See Types below.) Finally, you can `POST` to `/entities/[label]?/delete` to delete the entity instance.
 
 ## Validation
 
-Every action that updates data must always be validated. Data validation must _never_ throw exceptions. APIs that need convey unsuccessful validation must return `Invalid&lt;PendingEntity, Entity>`. Form actions should test for `Invalid` return types and use SvelteKit `fai()` (i.e. `import { fail } from '@sveltejs/kit';`) to send the `Validation` instance back to the UI. APIs should only throw (or bubble) exceptions for unexpected states that the user cannot fix themselves by submitting different data. For example, an empty value for a required property is a validation error, not an exceptional case. The user should resubmit with a different value. A dropped database connection, on the other hand, is an error state that the user can’t do anything about.
+Every action that updates data must always be validated before applying the change. Data validation must _never_ throw exceptions. APIs that need convey unsuccessful validation must return `Invalid<PendingEntity, Entity>`. Form actions should test for `Invalid` return types and use SvelteKit `fail()` (i.e. `import { fail } from '@sveltejs/kit';`) to send the `Validation` instance back to the UI with an HTTP status code of `422`. APIs should only throw (or bubble) exceptions for unexpected states that the user cannot fix themselves by resubmitting different data. For example, an empty value for a required property is a validation error, not an exceptional case. In that scenario, the user should resubmit the `PendingEntity` with different properties. A dropped database connection, on the other hand, is an error state that the user can’t do anything about and should thus throw an `Error`.
+
+The following sequence diagram illustrates the data flow:
 
 ```mermaid
 sequenceDiagram
@@ -38,18 +40,18 @@ sequenceDiagram
 
 
     UI->>+Action: FormData
-    Action->>+API: Pending<Entity>
+    Action->>+API: PendingEntity
     API->>+DB: SQL
     DB->>-API: JSON as Entity
     API->>-Action: MaybeInvalid<Entity>
     Action->>-UI: MaybeInvalid<Entity>
 ```
 
-The core `Validation` type. This can be used on the client or the server, so it should live in `$lib/validation.js`.
+The `Validation<>` class maintains validation error states for an entity. This can be used on the client or the server, so it should live in `$lib/validation.js`.
 
 ```javascript
 /**
- * @template Out
+ * @template Entity
  */
 export class Validation {
 	/** @type {Issue[]} */
@@ -61,7 +63,7 @@ export class Validation {
 	 *
 	 * @param {Issue['message']} message
 	 * @param {PropertyKey | Path} [property]
-	 * @returns {Validation<Out>}
+	 * @returns {Validation<Entity>}
 	 */
 	add(message, property) {
 		// console.log('Validation.add', message, property);
@@ -75,7 +77,7 @@ export class Validation {
 	 *
 	 * @param {Validation<unknown>} validation
 	 * @param {Path} [base_path = []]
-	 * @returns {Validation<Out>}
+	 * @returns {Validation<Entity>}
 	 */
 	merge(validation, base_path = []) {
 		for (const issue of validation) {
@@ -253,7 +255,7 @@ export type Invalid<In, Out, Prop extends string = 'input'> = {
 export type MaybeInvalid<In, Out, Prop extends string = 'input'> = Out | Invalid<In, Out, Prop>;
 ```
 
-In order for SvelteKit to pass strongly typed `Validation` instances between client and server, it needs a `src/hooks.js` configuration:
+In order for SvelteKit to pass strongly typed `Validation` instances between client and server, it needs a `src/hooks.js` transport configuration:
 
 ```javascript
 import { Validation } from '$lib/validation';
@@ -261,7 +263,7 @@ import { Validation } from '$lib/validation';
 /** @type {import('@sveltejs/kit').Transport} */
 export const transport = {
 	Validation: {
-		encode: (validation) => validation instanceof Validation && validation.issues(),
+		encode: (validation) => validation instanceof Validation && validation.toJSON(),
 		decode: (validation) => Validation.fromJSON(validation)
 	}
 };
@@ -277,9 +279,11 @@ All business logic should be implemented in a server-side API, `$lib/server/api.
 - `update_entity(input: Partial&lt;PendingEntity>) : MaybeInvalid&lt;PendingEntity, Entity>`: Updates an entity instance and returns the validated proper `Entity` instance or a validation error. the `Partial<>` allows the UI to submit a “patch” rather than a full entity instance.
 - `delete_entity(instance: Entity['label'] | Array&lt;Entity['label']>) : number | undefined`: Deletes one or more entities by its unique label. This should be atomic, such that all requested entities are deleted or none (and a validation result is returned or `Error` is thrown, such as for a dropped database connection).
 
+Callers should import `import * as api from '$lib/server/api.js'` and call functions as `api.list_entities()` to make clear that this is an API call. (This doesn’t affect the abilty to Vite to tree-shake the compiled code.)
+
 ## Types
 
-Concrete entities will always have a readonly unique identifier using the braned `ID` type (see definition below). Identifiers should use the singular name of the entity as its property name (e.g. `customer`) and default to UUID v4, generated in the database. They will also have a required `label` property that also uniquely identifies an instance. The `label` is user-configurable, human readable, and URL friendly. It is used as the `[label]` parameter in SvelteKit routes. (See Routes above.)
+Concrete entities will always have a readonly unique identifier using the branded `ID` type (see definition below). Identifiers should use the singular name of the entity as its property name (e.g. `customer`) and default to UUID v4, generated in the database. They will also have a required `label` property that also uniquely identifies an instance. The `label` is user-configurable, human readable, and URL friendly. It is used as the `[label]` parameter in SvelteKit routes. (See Routes above.)
 
 ```typescript
 /*** Utilities ***/
@@ -297,19 +301,18 @@ An HTML form can only express `string` (or `File`) types. This is especially imp
 
 - All properties are optional
 - All scalar properties can be `string`, `null`, or the original type of the property
-- Foreign key references to other entities should use the `ID` type of the referenced entity
+- Foreign key references to other entities should use the `ID` type of the referenced entity.
 
 (I don’t think it’s possible to make this truly generic, e.g. `Pending&lt;Entity>`.)
 
 ## Forms
 
-Entity CRUD should always use regular HTML forms along with SvelteKit’s `use:enhance` to avoid a page load. It’s vitally important to also use ARIA best practices , for example to identify validation errors. The `Control.svelte` is the default implementation of a singl form element. It handles the details of layout, informational help text, and, most importantly, wiring up validation, using the `Validation` class (see definition above).
+Entity CRUD should always use regular HTML forms along with SvelteKit’s `use:enhance` to avoid a page reload. It’s vitally important to also use ARIA best practices, for example to identify validation errors. `Control.svelte` is the default implementation of a single form element. It handles the details of layout, informational help text, and, most importantly, wiring up validation, using the `Validation` class (see definition above).
 
 `$lib/components/Control.svelte`:
 
 ```svelte
 <script>
-	// https://svelte.dev/docs/svelte/svelte-attachments#createAttachmentKey
 	import { createAttachmentKey } from 'svelte/attachments';
 	import { Validation } from '$lib/validation.js';
 
@@ -319,7 +322,6 @@ Entity CRUD should always use regular HTML forms along with SvelteKit’s `use:e
 	 * @returns {string}
 	 */
 	function title_case(str) {
-		// if (null === str || undefined === str) return str;
 		if ('string' === typeof str) {
 			return str
 				.toLowerCase()
@@ -330,7 +332,7 @@ Entity CRUD should always use regular HTML forms along with SvelteKit’s `use:e
 		throw new TypeError(typeof str);
 	}
 
-	/** @type {{name: string, id?: string, label?: string, validation?: Validation<unknown>; value?: unknown, help?: string; input?: import('svelte').Snippet<[Record<string, any>]>}}*/
+	/** @type {{name: string, id?: string, label?: string, validation?: Validation<unknown>; value?: unknown, help?: string; input?: import('svelte').Snippet<[Record<string, any>]>} & Record<string, any>} */
 	let {
 		name,
 		// svelte-ignore state_referenced_locally
@@ -338,7 +340,7 @@ Entity CRUD should always use regular HTML forms along with SvelteKit’s `use:e
 		// svelte-ignore state_referenced_locally
 		label = title_case(name),
 		validation = new Validation(),
-		value,
+		value = $bindable(),
 		help,
 		input,
 		...other
@@ -346,27 +348,22 @@ Entity CRUD should always use regular HTML forms along with SvelteKit’s `use:e
 
 	/** @type {Record<string, any>} */
 	export const attrs = {
-		placeholder: '\u200B', // Prevents weird Safari renering bug with baseline alignment in flexbox
+		placeholder: '\u200B',
 		autocomplete: 'off',
 		autocapitalize: 'off',
 		spellcheck: 'false'
 	};
 
-	// https://svelte.dev/docs/svelte/@attach
 	/**
-	 * Implments standard HTML custom validity properties. These are used for accessibility and styling (`:invalid`).
-     *
+	 * Implements standard HTML custom validity properties.
 	 * @param {Validation<unknown>} validation
 	 * @returns {import('svelte/attachments').Attachment<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>}
 	 */
 	function validate(validation) {
-		// Returns the attachement function closed over the validation
 		return function _validate(element) {
-			// console.log('@attach', element.tagName);
 			$effect(() => {
 				const { name } = element;
 				const message = validation?.first(name)?.message ?? '';
-				// console.log('$effect', name);
 				element.setCustomValidity(message);
 			});
 			return () => {
@@ -386,6 +383,9 @@ Entity CRUD should always use regular HTML forms along with SvelteKit’s `use:e
 				value,
 				[createAttachmentKey()]: validate(validation),
 				placeholder: attrs.placeholder,
+				'aria-invalid': validation?.has(name),
+				'aria-errormessage': validation?.has(name) ? `${name}-error` : undefined,
+				'aria-describedby': `${name}-help`,
 				...other
 			})}
 		{:else}
@@ -393,7 +393,7 @@ Entity CRUD should always use regular HTML forms along with SvelteKit’s `use:e
 				type="text"
 				{id}
 				{name}
-				{value}
+				bind:value
 				{@attach validate(validation)}
 				aria-invalid={validation?.has(name)}
 				aria-errormessage={validation?.has(name) ? `${name}-error` : undefined}
@@ -410,59 +410,6 @@ Entity CRUD should always use regular HTML forms along with SvelteKit’s `use:e
 		{/if}
 	</div>
 </div>
-
-<style>
-/*
-<!-- Target template: -->
-<div class="control">
-	<label for="name">Name</label>
-	<div class="contents">
-		<input type="text" name="name" value={form?.exercise.name} placeholder={'\u200B'} />
-		<p class="helper">The name of the exercise</p>
-		{#if form?.validation?.has('name')}
-			<p class="validation" id="name-error" aria-live="assertive">
-				{form?.validation.first('name')?.message}
-			</p>
-		{/if}
-	</div>
-</div>
-*/
-	.control {
-		display: flex;
-		gap: 1em 2em;
-		/* https://www2.webkit.org/show_bug.cgi?id=142968 */
-		align-items: baseline;
-		margin: 1.5em 0;
-	}
-	.control .validation,
-	.control .helper {
-		margin: 0.5rem 0;
-		font-size: 0.9em;
-		color: var(--color-secondary);
-	}
-	.validation,
-	.control .validation {
-		color: var(--color-error);
-		font-weight: bolder;
-	}
-	.control:last-of-type {
-		margin-bottom: 0;
-	}
-	.control label {
-		flex-grow: 0;
-		flex-shrink: 0;
-		flex-basis: 8em;
-		text-align: right;
-	}
-	.control label + * {
-		min-width: 10em;
-		flex-grow: 1;
-	}
-	.control .contents > :first-child {
-		display: block;
-		width: 100%;
-	}
-</style>
 ```
 
 A form can provide its own custom input control by passing in a Svelte `snippet`, for example:
@@ -483,6 +430,8 @@ A form can provide its own custom input control by passing in a Svelte `snippet`
 
 ### Client-side validation
 
+In addtion to server-side validation, forms should validate entities before submitting changes. Client and server should use the _exact_ same validation code and the `Validation` helper class to implement validation. Server-side validation may also include additional checks, such as the uniqueness of a `label` property. 
+
 Here‘s an example of a `form` declaration that implements a custom `use:enhance` to provide client-side validation:
 
 ```svelte
@@ -492,7 +441,7 @@ Here‘s an example of a `form` declaration that implements a custom `use:enhanc
 	action="?/create"
 	class:invalid={form?.validation?.has()}
 	use:enhance={({ formData, cancel }) => {
-		const pending_entity = /** @type {Pending<Entity>} */ ({
+		const pending_entity = /** @type {PendingEntity} */ ({
 			...Object.fromEntries(formData)
 		});
 		const entity = validate_pending_entity(pending_entity);
@@ -510,3 +459,5 @@ Here‘s an example of a `form` declaration that implements a custom `use:enhanc
 	<!-- <Control /> components or any other form HTML go here. -->
 </form>
 ```
+
+`validate_pending_entity()` takes the form input, `formData` coerced into a `PendingEntity` and validates its properties. This function should be use client-side and server-side to validate structural correctness.
