@@ -17,7 +17,7 @@ Routes describe the URL structure to access entities. In general, entity CRUD sh
 
 ## Validation
 
-Every action that updates data must always be validated before applying the change. Data validation must _never_ throw exceptions. APIs that need convey unsuccessful validation must return `Invalid<PendingEntity, Entity>`. Form actions should test for `Invalid` return types and use SvelteKit `fail()` (i.e. `import { fail } from '@sveltejs/kit';`) to send the `Validation` instance back to the UI with an HTTP status code of `422`. APIs should only throw (or bubble) exceptions for unexpected states that the user cannot fix themselves by resubmitting different data. For example, an empty value for a required property is a validation error, not an exceptional case. In that scenario, the user should resubmit the `PendingEntity` with different properties. A dropped database connection, on the other hand, is an error state that the user can’t do anything about and should thus throw an `Error`.
+Every action that updates data must always be validated before applying the change. Data validation must _never_ throw exceptions. APIs that need convey unsuccessful validation must return `Invalid<Pending<Entity>, Entity>`. Form actions should test for `Invalid` return types and use SvelteKit `fail()` (i.e. `import { fail } from '@sveltejs/kit';`) to send the `Validation` instance back to the UI with an HTTP status code of `422`. APIs should only throw (or bubble) exceptions for unexpected states that the user cannot fix themselves by resubmitting different data. For example, an empty value for a required property is a validation error, not an exceptional case. In that scenario, the user should resubmit the `Pending<Entity>` with different properties. A dropped database connection, on the other hand, is an error state that the user can’t do anything about and should thus throw an `Error`.
 
 The following sequence diagram illustrates the data flow:
 
@@ -40,14 +40,14 @@ sequenceDiagram
 
 
     UI->>+Action: FormData
-    Action->>+API: PendingEntity
+    Action->>+API: Pending<Entity>
     API->>+DB: SQL
     DB->>-API: JSON as Entity
     API->>-Action: MaybeInvalid<Entity>
     Action->>-UI: MaybeInvalid<Entity>
 ```
 
-The `Validation<>` class maintains validation error states for an entity. This can be used on the client or the server, so it should live in `$lib/validation.js`.
+The `Validation` class maintains validation error states for an entity. This can be used on the client or the server, so it should live in `$lib/validation.js`.
 
 ```javascript
 /**
@@ -273,17 +273,17 @@ export const transport = {
 
 All business logic should be implemented in a server-side API, `$lib/server/api.js`. This should export functions
 
-- `list_entities() : Iterable&lt;Entity>`: Gets all of the entity instances as an interable collection (usually an `Array`)
-- `get_entity(label: Entity['label']) : Entity | null`: Gets an individual entity by its unique `label` identifier
-- `create_entity(input: PendingEntity) : MaybeInvalid&lt;PendingEntity, Entity>`: Submits a pending version of an entity, likely sourced from a `FormData` instance from the UI and returns the proper `Entity` instance or a validation error. (See Types below)
-- `update_entity(input: Partial&lt;PendingEntity>) : MaybeInvalid&lt;PendingEntity, Entity>`: Updates an entity instance and returns the validated proper `Entity` instance or a validation error. the `Partial<>` allows the UI to submit a “patch” rather than a full entity instance.
-- `delete_entity(instance: Entity['label'] | Array&lt;Entity['label']>) : number | undefined`: Deletes one or more entities by its unique label. This should be atomic, such that all requested entities are deleted or none (and a validation result is returned or `Error` is thrown, such as for a dropped database connection).
+- `list_entities() : Iterable<Entity>`: Gets all of the entity instances as an interable collection (usually an `Array`)
+- `get_entity(label: Entity['label']) : Entity | null`: Gets an individual entity by its unique `label` identifier or `null` if no entity with that label exists.
+- `create_entity(input: Pending<Entity>) : MaybeInvalid&lt;Pending<Entity>, Entity>`: Submits a pending version of an entity, likely sourced from a `FormData` instance from the UI and returns the proper `Entity` instance or a validation error. (See Types below)
+- `update_entity(input: Partial<Pending<Entity>>) : MaybeInvalid<Pending<Entity>, Entity>`: Updates an entity instance and returns the validated proper `Entity` instance or a validation error. the `Partial<>` allows the UI to submit a “patch” rather than a full entity instance.
+- `delete_entity(instance: Entity['label'] | Array<Entity['label']>) : number | undefined`: Deletes one or more entities by its unique label. This should be atomic, such that all requested entities are deleted or none (and a validation result is returned or `Error` is thrown, such as for a dropped database connection).
 
 Callers should import `import * as api from '$lib/server/api.js'` and call functions as `api.list_entities()` to make clear that this is an API call. (This doesn’t affect the abilty to Vite to tree-shake the compiled code.)
 
 ## Types
 
-Concrete entities will always have a readonly unique identifier using the branded `ID` type (see definition below). Identifiers should use the singular name of the entity as its property name (e.g. `customer`) and default to UUID v4, generated in the database. They will also have a required `label` property that also uniquely identifies an instance. The `label` is user-configurable, human readable, and URL friendly. It is used as the `[label]` parameter in SvelteKit routes. (See Routes above.)
+Concrete entities will always have a readonly unique identifier using the branded `ID` type (see definition below). Identifiers should use the singular name of the entity as its property name (e.g. `customer`) and default to UUID v4, generated in the database. 
 
 ```typescript
 /*** Utilities ***/
@@ -295,9 +295,38 @@ declare const IDBrand: unique symbol;
 export type ID = string & { [IDBrand]: void };
 ```
 
+They will also have a required `label` property that also uniquely identifies an instance. The `label` is user-configurable, human readable, and URL friendly. It is used as the `[label]` parameter in SvelteKit routes. (See Routes above.)
+
+By default, a `label` can be calculated from a `name` using the `slug()` function:
+
+```javascript
+/**
+ * Converts a name to a URL-friendly slug.
+ * @param {string} name
+ * @returns {string}
+ */
+export function slug(name) {
+	const max_length = 80;
+	let len = 0,
+		index = 0,
+		result = '';
+	// https://stackoverflow.com/a/66721429
+	const tokens = name.split(/[^\p{L}\p{N}]+/gu);
+	while (len < max_length && index < tokens.length) {
+		len += tokens[index].length;
+		if (tokens[index].length > 0) {
+			result += (index > 0 ? '-' : '') + tokens[index++].toLowerCase();
+		} else {
+			index++;
+		}
+	}
+	return result;
+}
+```
+
 ### Pending entities
 
-An HTML form can only express `string` (or `File`) types. This is especially important for references to other entities, i.e. <dfn>foreign keys</dfn>. As a result, a SvelteKit form action with typically submit a “lite” version of an entity with loose `string | null` typeing on properties and `ID` references to related entities. As a result each `Entity` type needs a corresponding `PendingEntity` type. A PendingEntity is characterized by:
+An HTML form can only express `string` (or `File`) types. This is especially important for references to other entities, i.e. <dfn>foreign keys</dfn>. As a result, a SvelteKit form action with typically submit a “lite” version of an entity with loose `string | null` typeing on properties and `ID` references to related entities. As a result each `Entity` type needs a corresponding `Pending<Entity>` type. A Pending<Entity> is characterized by:
 
 - All properties are optional
 - All scalar properties can be `string`, `null`, or the original type of the property
@@ -441,7 +470,7 @@ Here‘s an example of a `form` declaration that implements a custom `use:enhanc
 	action="?/create"
 	class:invalid={form?.validation?.has()}
 	use:enhance={({ formData, cancel }) => {
-		const pending_entity = /** @type {PendingEntity} */ ({
+		const pending_entity = /** @type {Pending<Entity>} */ ({
 			...Object.fromEntries(formData)
 		});
 		const entity = validate_pending_entity(pending_entity);
@@ -460,4 +489,4 @@ Here‘s an example of a `form` declaration that implements a custom `use:enhanc
 </form>
 ```
 
-`validate_pending_entity()` takes the form input, `formData` coerced into a `PendingEntity` and validates its properties. This function should be use client-side and server-side to validate structural correctness.
+`validate_pending_entity()` takes the form input, `formData` coerced into a `Pending<Entity>` and validates its properties. This function should be use client-side and server-side to validate structural correctness.
