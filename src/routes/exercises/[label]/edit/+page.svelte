@@ -27,7 +27,8 @@
 	use:enhance={({ formData, cancel }) => {
 		const pending = /** @type {import('$lib/entities.js').PendingExercise} */ ({
 			exercise: data.exercise.exercise,
-			...Object.fromEntries(formData)
+			...Object.fromEntries(formData),
+			alternatives: formData.getAll('alternatives').map((v) => v.toString())
 		});
 		const result = validate_pending_exercise(pending);
 		if (is_invalid(result)) {
@@ -63,6 +64,31 @@
 	>
 		{#snippet input(provided)}
 			<textarea {...provided}></textarea>
+		{/snippet}
+	</Control>
+
+	<Control
+		name="alternatives"
+		validation={form?.validation}
+		help="Select other exercises that can substitute for this one"
+	>
+		{#snippet input(provided)}
+			<fieldset>
+				{#each data.available_exercises as ex}
+					<label>
+						<input
+							type="checkbox"
+							name="alternatives"
+							value={ex.exercise}
+							checked={exercise.alternatives?.includes(ex.exercise)}
+						/>
+						{ex.name}
+					</label>
+				{/each}
+				{#if data.available_exercises.length === 0}
+					<p class="empty">(No other exercises available)</p>
+				{/if}
+			</fieldset>
 		{/snippet}
 	</Control>
 

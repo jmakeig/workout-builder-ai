@@ -1,5 +1,5 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { get_exercise, update_exercise, delete_exercise } from '$lib/server/api.js';
+import { get_exercise, update_exercise, delete_exercise, list_exercises } from '$lib/server/api.js';
 import { is_invalid } from '$lib/entities.js';
 
 /** @type {import('./$types').PageServerLoad} */
@@ -10,7 +10,10 @@ export async function load({ params }) {
 		error(404, 'Exercise not found');
 	}
 
-	return { exercise };
+	const all_exercises = await list_exercises();
+	const available_exercises = all_exercises.filter((e) => e.exercise !== exercise.exercise);
+
+	return { exercise, available_exercises };
 }
 
 /** @type {import('./$types').Actions} */
@@ -27,7 +30,8 @@ export const actions = {
 			exercise: existing.exercise,
 			label: form_data.get('label')?.toString() ?? null,
 			name: form_data.get('name')?.toString() ?? null,
-			description: form_data.get('description')?.toString() ?? null
+			description: form_data.get('description')?.toString() ?? null,
+			alternatives: form_data.getAll('alternatives').map((v) => v.toString())
 		};
 
 		const result = await update_exercise(pending);

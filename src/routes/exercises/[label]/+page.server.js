@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { get_exercise } from '$lib/server/api.js';
+import { get_exercise, get_exercises_by_ids } from '$lib/server/api.js';
 
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ params }) {
@@ -9,5 +9,7 @@ export async function load({ params }) {
 		error(404, 'Exercise not found');
 	}
 
-	return { exercise };
+	const alternatives = await get_exercises_by_ids(exercise.alternatives);
+
+	return { exercise, alternatives };
 }

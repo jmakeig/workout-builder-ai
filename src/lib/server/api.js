@@ -38,27 +38,35 @@ export async function get_exercise(label) {
 }
 
 /**
- * @param {import('$lib/entities.js').PendingExercise} input
+ * @param {import('$lib/entities.js').PendingExercise} pending
  * @returns {Promise<import('$lib/validation.js').MaybeInvalid<import('$lib/entities.js').PendingExercise, import('$lib/entities.js').Exercise, 'exercise'>>}
  */
-export async function create_exercise(input) {
-	await simulate_latency();
-	const result = validate_pending_exercise(input);
+export async function create_exercise(pending) {
+	await simulate_latency(25, 30);
+
+	// Validate first
+	const result = validate_pending_exercise(pending);
 	if (is_invalid(result)) {
 		return result;
 	}
 
+	// Assign ID after validation passes
+	const exercise = /** @type {import('$lib/entities.js').Exercise} */ ({
+		...result,
+		exercise: /** @type {import('$lib/entities.js').ID} */ (crypto.randomUUID())
+	});
+
 	// Check for duplicate label
-	if (exercises.some((e) => e.label === result.label)) {
+	if (exercises.some((e) => e.label === exercise.label)) {
 		const validation = /** @type {Validation<import('$lib/entities.js').Exercise>} */ (
 			new Validation()
 		);
 		validation.add('An exercise with this label already exists', 'label');
-		return { validation, exercise: input };
+		return { validation, exercise: pending };
 	}
 
-	exercises.push(result);
-	return result;
+	exercises.push(exercise);
+	return exercise;
 }
 
 /**
@@ -104,6 +112,25 @@ export async function delete_exercise(label) {
 	if (index === -1) {
 		return false;
 	}
+	const deleted_id = exercises[index].exercise;
 	exercises.splice(index, 1);
+
+	// Remove from all other exercises' alternatives
+	for (const exercise of exercises) {
+		if (exercise.alternatives.includes(deleted_id)) {
+			// @ts-ignore - reassigning readonly array to remove deleted reference
+			exercise.alternatives = exercise.alternatives.filter((id) => id !== deleted_id);
+		}
+	}
+
 	return true;
+}
+
+/**
+ * @param {ReadonlyArray<string>} ids
+ * @returns {Promise<ReadonlyArray<import('$lib/entities.js').Exercise>>}
+ */
+export async function get_exercises_by_ids(ids) {
+	await simulate_latency();
+	return exercises.filter((e) => ids.includes(e.exercise));
 }

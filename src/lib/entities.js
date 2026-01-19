@@ -33,6 +33,7 @@ export function slug(name) {
  *   label: string;
  *   name: string;
  *   description: string;
+ *   alternatives: ReadonlyArray<ID>;
  * }} Exercise
  */
 
@@ -42,6 +43,7 @@ export function slug(name) {
  *   label?: string | null;
  *   name?: string | null;
  *   description?: string | null;
+ *   alternatives?: string[] | null;
  * }} PendingExercise
  */
 
@@ -70,15 +72,21 @@ export function validate_pending_exercise(input) {
 
 	const description = input.description?.trim() ?? '';
 
+	const alternatives = input.alternatives ?? [];
+	if (input.exercise && alternatives.includes(input.exercise)) {
+		validation.add('An exercise cannot list itself as an alternative', 'alternatives');
+	}
+
 	if (!validation.is_valid()) {
 		return { validation, exercise: input };
 	}
 
 	return /** @type {Exercise} */ ({
-		exercise: input.exercise ?? /** @type {ID} */ (crypto.randomUUID()),
+		...(input.exercise ? { exercise: /** @type {ID} */ (input.exercise) } : {}),
 		label,
 		name,
-		description
+		description,
+		alternatives: /** @type {ID[]} */ (alternatives)
 	});
 }
 

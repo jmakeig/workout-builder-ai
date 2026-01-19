@@ -11,6 +11,19 @@
 
 	<dt>Description</dt>
 	<dd>{data.exercise.description || '(none)'}</dd>
+
+	<dt>Alternatives</dt>
+	<dd>
+		{#if data.alternatives.length === 0}
+			(none)
+		{:else}
+			<ul>
+				{#each data.alternatives as alt}
+					<li><a href="/exercises/{alt.label}">{alt.name}</a></li>
+				{/each}
+			</ul>
+		{/if}
+	</dd>
 </dl>
 
 <p>
